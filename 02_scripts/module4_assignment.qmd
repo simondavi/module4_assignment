@@ -34,7 +34,7 @@ bibliography: references.bib
 
 ### Content
 (1) Read Data
-(2) CFA
+(2) Validation of a Scale: CFA
 
 ### Environment: Packages
 ```{r}
@@ -64,7 +64,7 @@ The name of the data-file is "module4_assignment_data.csv".
 data <- read.csv(here("01_data_processed/module4_assignment_data.csv"))
 ```
 
-## (2) Assessment of One Data Quality Aspect: Validation of a Scale
+## (2) Validation of a Scale: CFA
 
 ### Descriptive Analysis: Items
 ```{r}
