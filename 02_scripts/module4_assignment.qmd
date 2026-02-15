@@ -1,0 +1,239 @@
+---
+title: Course Assignment D1 Modern Tools & Workflows for Data Quality
+title-block-banner: "#3459e6"
+author:
+  - name: David Simon
+    email: da.simon@dipf.den
+date: today
+date-format: DD MMMM YYYY
+editor: source
+execute:
+  warning: false
+  message: false
+  cache: true
+format: 
+  html:
+    echo: true
+    theme: zephyr
+    mainfont: Arial
+    fontsize: 1.2em
+    code-block-bg: true
+    code-block-border-left: "#3459e6"
+    toc: true
+    toc-location: left
+    toc-depth: 4
+    embed-resources: true
+    code-fold: true
+    code-tools: true
+    code-link: true
+csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
+bibliography: references.bib
+---
+
+## Information
+
+### Content
+(1) Read Data
+(2) CFA
+
+### Environment: Packages
+```{r}
+####  ------------- Load Packages ------------- ####
+library(here)           # find files
+library(tidyverse)      # data management
+library(psych)          # descriptives
+library(lavaan)         # SEM
+library(semPlot)        # plot SEM
+
+installed.packages()[names(sessionInfo()$otherPkgs), "Version"]
+```
+
+### Environment: R-Version
+```{r}
+R.Version <- R.Version()
+R.Version$version.string
+```
+
+## (1) Read Data
+
+Data: The data consists of 16 items from an instrument measuring teacher mentoring self-efficacy beliefs, developed by Tickell and Klassen [-@tickell2024developing]. The authors suggest a two-factor model, with the factors named *Pedagogical Practices* and *Professional Relationships*. The present data is based on a German translation of the scale that I created. The following code will test the factor structure of the German translation in a sample of 176 teacher educators.
+
+The name of the data-file is "module4_assignment_data.csv".
+
+```{r}
+data <- read.csv(here("01_data_processed/module4_assignment_data.csv"))
+```
+
+## (2) Assessment of One Data Quality Aspect: Validation of a Scale
+
+### Descriptive Analysis: Items
+```{r}
+describe(data)
+```
+
+### Confirmatory Factor Analysis 
+```{r}
+data_cfa <- data %>%
+  dplyr::select(seffsab_1:seffsab_9)
+```
+
+*Step 1: Fitting a Two-factor Model* <br>
+
+Since the original study used a two-factor model, I will start with a two-factor solution and test it against a competing model later.
+
+```{r}
+# specify the model
+cfa_model_se <- ' pae =~ seffsab_1 + seffsab_2 + seffsab_20 + seffsab_14 + 
+                         seffsab_6 + seffsab_28 + seffsab_48 + seffsab_39 +
+                         seffsab_46 + seffsab_47 + seffsab_4
+                  rel =~ seffsab_29 + seffsab_44 + seffsab_27 + seffsab_43 + 
+                         seffsab_9 '
+
+# fit the model
+fit_cfa_se <- lavaan::cfa(cfa_model_se, 
+                          data = data_cfa,
+                          estimator = 'mlr',
+                          std.lv = TRUE)
+```
+
+Extraxt model fit:
+
+```{r}
+lavaan::fitMeasures(fit_cfa_se, c("chisq", "df", "pvalue", "cfi", "srmr", "rmsea"))
+```
+
+I assume that CFI values smaller than .950, RMSEA values greater than .08, and SRMR values greater than .10 suggest a poor fit, e.g. Hu and Bentler [-@Hu01011999].
+Acording to this model fit was poor. In the next step I looked at the factor loadings.
+
+*Step 2: Evaluating Factor Loadings*<br>
+
+In order to improve the model-fit I evaluated the factor loading of each item:
+
+```{r}
+inspect_fit_cfa_se <- lavaan::inspect(fit_cfa_se, what = "std")
+inspect_fit_cfa_se$lambda
+```
+
+In the case of *Professional Relationships* several items showed a small factor loading (factor loading < .45). I discarded the items `seffsab_28`, `seffsab_47` and `seffsab_48` subsequently until further adaptation did not improve model fit anymore. 
+
+I reran the CFA:
+
+```{r}
+# specify the model
+cfa_model_se_2 <- ' pae =~ seffsab_1 + seffsab_2 + seffsab_20 + seffsab_14 + 
+                           seffsab_6 + seffsab_39 + seffsab_46 + seffsab_4
+                    rel =~ seffsab_29 + seffsab_44 + seffsab_27 + seffsab_43 + 
+                           seffsab_9 '
+
+# fit the model
+fit_cfa_se_2 <- lavaan::cfa(cfa_model_se_2, 
+                          data = data_cfa,
+                          estimator = 'mlr',
+                          std.lv = TRUE)
+```
+
+Model fit was still not as good as desired:
+
+```{r}
+lavaan::fitMeasures(fit_cfa_se_2, c("chisq", "df", "pvalue", "cfi", "srmr", "rmsea"))
+```
+
+*Step 3: Evaluating modification indices*<br>
+
+```{r}
+inspect_fit_cfa_se_2 <- lavaan::modindices(fit_cfa_se_2, sort = TRUE, minimum.value = 10)
+inspect_fit_cfa_se_2
+```
+
+Model fit can be improved by eliminating a cross loading and a residual variances:
+
+- `pae =~ seffsab_27` was added and `rel =~ seffsab_27`removed
+- `seffsab_1 ~~ seffsab_2` was added (justified by similarity of content) 
+
+- `seffsab_27`: Objektiv und fair bleiben, wenn ich mit meinen Lehramtsanwärter_innen arbeite. (Remain objective and fair when working with your mentee?)
+- `seffsab_1`: Konstruktives und sinnvolles Feedback zum Fortschritt und zur Leistung meiner Lehramtsanwärter_innen geben, um ihnen zu helfen, ihre nächsten Schritte zu identifizieren. (Provide constructive and meaningful feedback on your mentee’s progress and performance, helping them to identify their next steps?)
+- `seffsab_2`: Meine Lehramtsanwärter_innen auf eine sinnvolle und konstruktive Weise herausfordern. (Challenge your mentee in a meaningful and constructive way?)
+- Instruction: Wie zuversichtlich sind Sie, dass Sie Folgendes können? (How confident are you that you can…)
+
+I reran the CFA:
+
+```{r}
+# specify the model
+cfa_model_se_3 <- ' pae =~ seffsab_1 + seffsab_2 + seffsab_20 + seffsab_14 + 
+                           seffsab_6 + seffsab_39 + seffsab_46 + seffsab_4 +
+                           seffsab_27
+                    rel =~ seffsab_29 + seffsab_44 + seffsab_43 + seffsab_9 
+                    
+                    # residucal variances
+                    seffsab_1 ~~ seffsab_2'
+
+# fit the model
+fit_cfa_se_3 <- lavaan::cfa(cfa_model_se_3, 
+                          data = data_cfa,
+                          estimator = 'mlr',
+                          std.lv = TRUE)
+```
+
+Model fit improved:
+
+```{r}
+lavaan::fitMeasures(fit_cfa_se_3, c("chisq", "df", "pvalue", "cfi", "srmr", "rmsea"))
+```
+The CFI value is still below .950, but it came close. The RMSEA and SRMR are sufficient.
+I will interpret this as "good enough".
+
+*Step 4: Contrasting a One-factor Model*<br>
+
+```{r}
+# specify the model
+cfa_model_se_4 <- ' sef =~ seffsab_1 + seffsab_2 + seffsab_20 + seffsab_14 + 
+                           seffsab_6 + seffsab_39 + seffsab_46 + seffsab_4 +
+                           seffsab_29 + seffsab_44 + seffsab_27 + seffsab_43 + 
+                           seffsab_9 
+                           
+                    # residucal variances
+                    seffsab_1 ~~ seffsab_2'
+
+# fit the model
+fit_cfa_se_4 <- lavaan::cfa(cfa_model_se_4, 
+                          data = data_cfa,
+                          estimator = 'mlr',
+                          std.lv = TRUE)
+
+lavaan::fitMeasures(fit_cfa_se_4, c("chisq", "df", "pvalue", "cfi", "srmr", "rmsea"))
+```
+
+Compare to two-factor-model:
+
+```{r}
+ano <- anova(fit_cfa_se_3, fit_cfa_se_4)
+ano
+```
+
+The two-factor model fits the data better than the one-factor model. For now, this is my preferred model.
+
+### Summary
+Overall, the originally proposed two-factor structure can also be displayed in the German translation. However, the model's fit are slightly worse than reported in the original paper.
+
+A plot of the SEM can be found in the output folder:
+```{r}
+plot <- semPaths(
+  fit_cfa_se_3,
+  what = "std",
+  layout = "tree",
+  structural = FALSE,
+  residuals = FALSE,
+  intercepts = FALSE
+)
+
+pdf(
+  here("03_output", "cfa_se_3_plot.pdf"),
+  width = 8,
+  height = 6
+)
+```
+
+## References
+
+::: {#refs}
+:::
