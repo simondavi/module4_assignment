@@ -16,7 +16,7 @@ __04_documentation/    # Scale documentation
 
 - `LICENSE.md` — License information for this project  
 - `README.md` — Project overview and documentation  
-- `run.sh` — Shell script to open the Quarto html document in the browser
+- `run.sh` — Shell script to open the Quarto html document in the browser (firefox only)
 
 ## Setup
 
