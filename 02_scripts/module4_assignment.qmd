@@ -215,8 +215,14 @@ The two-factor model fits the data better than the one-factor model. For now, th
 ### Summary
 Overall, the originally proposed two-factor structure can also be displayed in the German translation. However, the model's fit are slightly worse than reported in the original paper.
 
-A plot of the SEM can be found in the output folder:
+A plot of the SEM can be found in the output folder.
 ```{r}
+png(
+  here("03_output/cfa_se_3_plot.png"),
+  width = 1000,
+  height = 800
+)
+
 plot <- semPaths(
   fit_cfa_se_3,
   what = "std",
@@ -224,12 +230,6 @@ plot <- semPaths(
   structural = FALSE,
   residuals = FALSE,
   intercepts = FALSE
-)
-
-pdf(
-  here("03_output", "cfa_se_3_plot.pdf"),
-  width = 8,
-  height = 6
 )
 ```
 
